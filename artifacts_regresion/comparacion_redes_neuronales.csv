@@ -1,0 +1,5 @@
+experimento,nombre,capas,dropout,lr,batch,MAE,RMSE,R2,epochs_trained,val_loss_final,val_mae_final_scaled
+nn_exp2_mas_capas,nn_exp2_mas_capas,"[128, 64, 32]",0.2,0.001,4096,34.2255,42.4449,0.2822,29,0.7185,0.6843
+nn_exp1_base,nn_exp1_base,"[64, 32]",0.2,0.001,4096,34.339,42.576,0.2777,23,0.7212,0.6859
+nn_exp3_mayor_drop,nn_exp3_mayor_drop,"[128, 64, 32]",0.4,0.001,4096,34.8191,43.0275,0.2623,30,0.7353,0.6952
+nn_exp4_lr_bajo,nn_exp4_lr_bajo,"[128, 64, 32]",0.3,0.0005,4096,34.9779,43.2096,0.2561,23,0.7411,0.698
