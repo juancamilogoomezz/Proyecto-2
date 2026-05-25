@@ -1,0 +1,28 @@
+{
+    "target": "clase_madre",
+    "features": [
+        "Puntaje Automóvil",
+        "Puntaje Computador",
+        "PUNT_INGLES",
+        "PUNT_MATEMATICAS",
+        "PUNT_SOCIALES_CIUDADANAS",
+        "PUNT_C_NATURALES",
+        "PUNT_LECTURA_CRITICA",
+        "Puntaje Desempeño ingles",
+        "Puntaje Internet"
+    ],
+    "class_names": [
+        "Básica/Sin",
+        "Secundaria",
+        "Técnica",
+        "Superior"
+    ],
+    "modelo_principal": "red_neuronal",
+    "descripcion": "Clasificación del nivel educativo de la madre usando puntajes y variables de contexto.",
+    "metricas_test": {
+        "accuracy": 0.461,
+        "f1_macro": 0.391,
+        "auc_ovr": 0.693,
+        "adjusted_accuracy_pm1": 0.818
+    }
+}
