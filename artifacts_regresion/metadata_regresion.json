@@ -1,0 +1,41 @@
+{
+  "target": "PUNT_GLOBAL",
+  "features": [
+    "FAMI_ESTRATOVIVIENDA",
+    "FAMI_EDUCACIONPADRE",
+    "FAMI_EDUCACIONMADRE",
+    "FAMI_TIENEINTERNET",
+    "FAMI_TIENECOMPUTADOR",
+    "FAMI_TIENELAVADORA",
+    "COLE_BILINGUE",
+    "COLE_JORNADA",
+    "COLE_NATURALEZA",
+    "COLE_AREA_UBICACION"
+  ],
+  "best_neural_network": "nn_exp2_mas_capas",
+  "best_neural_network_params": {
+    "nombre": "nn_exp2_mas_capas",
+    "capas": [
+      128,
+      64,
+      32
+    ],
+    "dropout": 0.2,
+    "lr": 0.001,
+    "batch": 4096
+  },
+  "best_neural_network_metrics": {
+    "MAE": 34.2254753112793,
+    "RMSE": 42.44491202300489,
+    "R2": 0.28218865394592285,
+    "epochs_trained": 29.0,
+    "val_loss_final": 0.7184544205665588,
+    "val_mae_final_scaled": 0.6842921376228333
+  },
+  "hist_gradient_boosting_metrics": {
+    "MAE": 33.81731187566536,
+    "RMSE": 42.07809031104596,
+    "R2": 0.2945420929100985
+  },
+  "selected_by_rmse": "baseline_hist_gradient_boosting"
+}

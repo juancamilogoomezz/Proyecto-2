@@ -1,0 +1,6 @@
+tipo_modelo,experimento,MAE,RMSE,R2,epochs_trained
+Modelo clásico,baseline_hist_gradient_boosting,33.8173,42.0781,0.2945,
+Red neuronal,nn_exp2_mas_capas,34.2255,42.4449,0.2822,29.0
+Red neuronal,nn_exp1_base,34.339,42.576,0.2777,23.0
+Red neuronal,nn_exp3_mayor_drop,34.8191,43.0275,0.2623,30.0
+Red neuronal,nn_exp4_lr_bajo,34.9779,43.2096,0.2561,23.0
