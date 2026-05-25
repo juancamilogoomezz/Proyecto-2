@@ -22,8 +22,10 @@ import tensorflow as tf
 # CONFIGURACIÓN Y CARGA DE ARTEFACTOS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-ARTIFACT_DIR = Path("artifacts_regresion")
+BASE_DIR = Path(__file__).resolve().parent
 
+ARTIFACT_DIR = BASE_DIR / "artifacts_regresion"
+ARTIFACT_CLF_DIR = BASE_DIR / "artifacts_clasificacion"
 # Modelos serializados (regresión - Jerónimo)
 modelo_nn = tf.keras.models.load_model(
 
@@ -49,6 +51,29 @@ FEATURES     = metadata["features"]
 
 # Tabla de comparación de experimentos
 df_comp = pd.read_csv(ARTIFACT_DIR / "comparacion_final_regresion.csv")
+
+# ============================
+# Artefactos clasificación
+# ============================
+
+
+modelo_clf_nn = tf.keras.models.load_model(
+    ARTIFACT_CLF_DIR / "modelo_clasificacion_nn.keras"
+)
+
+modelo_clf_rf = joblib.load(
+    ARTIFACT_CLF_DIR / "modelo_clasificacion_rf.pkl"
+)
+
+scaler_clf = joblib.load(
+    ARTIFACT_CLF_DIR / "scaler_clasificacion.pkl"
+)
+
+with open(ARTIFACT_CLF_DIR / "metadata_clasificacion.json", "r", encoding="utf-8") as f:
+    metadata_clf = json.load(f)
+
+FEATURES_CLF = metadata_clf["features"]
+CLASS_NAMES_CLF = metadata_clf["class_names"]
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPCIONES LEGIBLES PARA DROPDOWNS
@@ -168,7 +193,94 @@ def predecir_hgb(input_dict):
 
     return float(pred)
 
+def predecir_clasificacion(input_dict):
+    row = []
 
+    for feat in FEATURES_CLF:
+        value = input_dict.get(feat)
+
+        if value is None:
+            raise ValueError(f"Falta el valor para la variable: {feat}")
+
+        row.append(float(value))
+
+    X_new = np.array([row], dtype="float32")
+
+    # Red neuronal: usa datos escalados
+    X_new_s = scaler_clf.transform(X_new).astype("float32")
+    proba_nn = modelo_clf_nn.predict(X_new_s, verbose=0)[0]
+    pred_nn = int(np.argmax(proba_nn))
+
+    # Random Forest: según el notebook, usa datos sin escalar
+    proba_rf = modelo_clf_rf.predict_proba(X_new)[0]
+    pred_rf = int(np.argmax(proba_rf))
+
+    return {
+        "pred_nn": pred_nn,
+        "proba_nn": proba_nn,
+        "pred_rf": pred_rf,
+        "proba_rf": proba_rf,
+        "label_nn": CLASS_NAMES_CLF[pred_nn],
+        "label_rf": CLASS_NAMES_CLF[pred_rf],
+    }
+
+def calcular_puntaje_total_clasificacion(input_dict):
+    """
+    Calcula el puntaje total como suma de las cinco áreas principales:
+    Inglés, Matemáticas, Sociales, Ciencias Naturales y Lectura Crítica.
+
+    La función busca los nombres reales usados en FEATURES_CLF para evitar
+    errores por diferencias entre mayúsculas, espacios o guiones bajos.
+    """
+    import unicodedata
+    import re
+
+    def normalizar(texto):
+        texto = str(texto).lower()
+        texto = unicodedata.normalize("NFKD", texto)
+        texto = "".join(c for c in texto if not unicodedata.combining(c))
+        texto = re.sub(r"[^a-z0-9]", "", texto)
+        return texto
+
+    # Mapa normalizado de las variables disponibles en input_dict
+    keys_norm = {
+        normalizar(k): k
+        for k in input_dict.keys()
+    }
+
+    # Posibles nombres de cada área
+    areas = {
+        "Inglés": ["puntingles", "puntajeingles"],
+        "Matemáticas": ["puntmatematicas", "puntajematematicas"],
+        "Sociales": ["puntsocialesciudadanas", "puntajesocialesciudadanas"],
+        "Ciencias Naturales": ["puntcnaturales", "puntajecnaturales"],
+        "Lectura Crítica": ["puntlecturacritica", "puntajelecturacritica"],
+    }
+
+    total = 0
+
+    for nombre_area, posibles_nombres in areas.items():
+        key_real = None
+
+        for nombre_norm in posibles_nombres:
+            if nombre_norm in keys_norm:
+                key_real = keys_norm[nombre_norm]
+                break
+
+        if key_real is None:
+            raise ValueError(
+                f"No se encontró la variable para calcular {nombre_area}. "
+                f"Variables disponibles: {list(input_dict.keys())}"
+            )
+
+        value = input_dict.get(key_real)
+
+        if value is None:
+            raise ValueError(f"Falta el valor para calcular {nombre_area}")
+
+        total += float(value)
+
+    return total
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # GRÁFICAS ESTÁTICAS DEL MODELO
@@ -272,7 +384,7 @@ tabs = dcc.Tabs(
             selected_style=TAB_SELECTED_STYLE,
         ),
         dcc.Tab(
-            label="Clasificación de Desempeño",
+            label="Clasificación Educación Madre (Clasificación)",
             value="tab-clasificacion",
             style=TAB_STYLE,
             selected_style=TAB_SELECTED_STYLE,
@@ -395,21 +507,105 @@ tab_regresion = html.Div([
 # TAB 2 — CLASIFICACIÓN  
 # ═══════════════════════════════════════════════════════════════════════════════
 
-tab_clasificacion = html.Div([
-    dbc.Alert([,
-        html.Br(),
-    ], color="warning", className="mt-3 mb-3"),
+def crear_input_clasificacion(feature):
+    label = feature.replace("_", " ").replace("punt", "Puntaje").title()
 
-    dbc.Card([
-        dbc.CardBody([
-            html.H4("Pestaña en construcción", className="text-center text-muted mt-5"),
-            html.P(
-                "Aquí irá el modelo de clasificación de Juan Camilo.",
-                className="text-center text-muted mb-5",
-            ),
-        ])
-    ], className="shadow-sm", style={"minHeight": "400px"}),
-], className="p-3")
+    return dbc.Col([
+        dbc.Label(label, style={"fontWeight": "600", "fontSize": "0.85rem"}),
+        dbc.Input(
+            id=f"clf-{feature}",
+            type="number",
+            value=0,
+            step=1,
+            style={"borderRadius": "10px"}
+        )
+    ], md=6, className="mb-3")
+
+
+tab_clasificacion = dbc.Container([
+    dbc.Row([
+        dbc.Col([
+            dbc.Card([
+                dbc.CardBody([
+                    html.H4(
+                        "Clasificación del nivel educativo de la madre",
+                        style={"fontWeight": "700", "color": "#1f2a3d"}
+                    ),
+                    html.P(
+                        "Ingrese los valores del estudiante para estimar la clase educativa asociada a la madre.",
+                        style={"color": "#6c757d"}
+                    ),
+
+                    dbc.Row([
+                        crear_input_clasificacion(feature)
+                        for feature in FEATURES_CLF
+                    ]),
+
+                    dbc.Button(
+                        "Predecir clasificación",
+                        id="btn-clasificar",
+                        color="primary",
+                        className="mt-2",
+                        style={"borderRadius": "10px"}
+                    )
+                ])
+            ], className="shadow-sm", style={"borderRadius": "18px"})
+        ], lg=5),
+
+        dbc.Col([
+            dbc.Card([
+                dbc.CardBody([
+                    html.H4(
+                        "Resultado de clasificación",
+                        style={"fontWeight": "700", "color": "#1f2a3d"}
+                    ),
+                    html.Div(
+                        id="resultado-clasificacion",
+                        children=dbc.Alert(
+                            "Ingrese los valores y presione “Predecir clasificación”.",
+                            color="light"
+                        )
+                    ),
+                    html.Hr(),
+
+                    html.H5(
+                        "Evaluación de modelos",
+                        style={"fontWeight": "700", "color": "#1f2a3d", "marginTop": "1rem"}
+                    ),
+
+                    html.P(
+                        "Comparación entre la red neuronal y Random Forest usando métricas globales y matrices de confusión.",
+                        style={"color": "#6c757d", "fontSize": "0.9rem"}
+                    ),
+
+                    dbc.Row([
+                        dbc.Col([
+                            html.Img(
+                                src="/assets/radar_clasificacion.png",
+                                style={
+                                    "width": "100%",
+                                    "borderRadius": "12px",
+                                    "boxShadow": "0 2px 8px rgba(0,0,0,0.08)"
+                                }
+                            )
+                        ], lg=12, className="mb-4"),
+
+                        dbc.Col([
+                            html.Img(
+                                src="/assets/matrices_confusion_clasificacion.png",
+                                style={
+                                    "width": "100%",
+                                    "borderRadius": "12px",
+                                    "boxShadow": "0 2px 8px rgba(0,0,0,0.08)"
+                                }
+                            )
+                        ], lg=12),
+                    ])
+                ])
+            ], className="shadow-sm", style={"borderRadius": "18px"})
+        ], lg=7),
+    ])
+], fluid=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -437,7 +633,6 @@ def render_tab(tab):
     if tab == "tab-regresion":
         return tab_regresion
     return tab_clasificacion
-
 
 @callback(
     Output("resultado-prediccion", "children"),
@@ -581,6 +776,110 @@ def hacer_prediccion(n_clicks, *values):
             className="mt-2",
         )
 
+@callback(
+    Output("resultado-clasificacion", "children"),
+    Input("btn-clasificar", "n_clicks"),
+    [State(f"clf-{feature}", "value") for feature in FEATURES_CLF],
+    prevent_initial_call=True,
+)
+def hacer_clasificacion(n_clicks, *values):
+    try:
+        input_dict = dict(zip(FEATURES_CLF, values))
+
+        resultado = predecir_clasificacion(input_dict)
+        puntaje_total = calcular_puntaje_total_clasificacion(input_dict)
+
+        proba_nn = resultado["proba_nn"]
+        proba_rf = resultado["proba_rf"]
+
+        fig = go.Figure()
+
+        fig.add_trace(go.Bar(
+            x=CLASS_NAMES_CLF,
+            y=proba_nn,
+            name="Red neuronal",
+            marker_color="#8DB5F2"
+        ))
+
+        fig.add_trace(go.Bar(
+            x=CLASS_NAMES_CLF,
+            y=proba_rf,
+            name="Random Forest",
+            marker_color="#ff7f3f"
+        ))
+
+        fig.update_layout(
+            title="Probabilidad por clase",
+            yaxis_title="Probabilidad",
+            xaxis_title="Clase",
+            yaxis=dict(range=[0, 1]),
+            barmode="group",
+            template="plotly_white",
+            height=330,
+            margin=dict(t=50, b=50, l=40, r=20),
+            legend=dict(orientation="h", y=-0.25)
+        )
+
+        return html.Div([
+            dbc.Row([
+                dbc.Col([
+                    dbc.Alert([
+                        html.H5("Resultado principal", className="alert-heading"),
+
+                        html.Div([
+                            html.Div([
+                                html.H3(
+                                    f"{puntaje_total:.0f} pts",
+                                    style={
+                                        "fontWeight": "800",
+                                        "color": "#1f2a3d",
+                                        "marginBottom": "0.1rem"
+                                    }
+                                ),
+                                html.P(
+                                    "Puntaje total digitado por el usuario",
+                                    style={
+                                        "color": "#6c757d",
+                                        "fontSize": "0.9rem",
+                                        "marginBottom": "0"
+                                    }
+                                ),
+                            ], style={
+                                "backgroundColor": "#f8f9fa",
+                                "borderRadius": "12px",
+                                "padding": "14px",
+                                "marginBottom": "14px",
+                                "border": "1px solid #e5e7eb"
+                            }),
+
+                            html.P([
+                                "Red neuronal: ",
+                                html.Strong(resultado["label_nn"])
+                            ]),
+
+                            html.P([
+                                "Random Forest: ",
+                                html.Strong(resultado["label_rf"])
+                            ], style={"marginBottom": "0"})
+                        ])
+                    ], color="info")
+                ], lg=12)
+            ]),
+
+            dcc.Graph(
+                figure=fig,
+                config={"displayModeBar": False}
+            )
+        ])
+
+    except Exception as e:
+        return dbc.Alert(
+            [
+                html.Strong("Error al generar la clasificación: "),
+                html.Code(str(e))
+            ],
+            color="danger"
+        )
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # MAIN
@@ -588,3 +887,4 @@ def hacer_prediccion(n_clicks, *values):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8050, debug=False)
+ 
