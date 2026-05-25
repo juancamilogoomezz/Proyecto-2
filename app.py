@@ -256,7 +256,7 @@ TAB_SELECTED_STYLE = {
 # ── Header ────────────────────────────────────────────────────────────────────
 header = html.Div([
     html.H2("Saber 11 — Valle del Cauca", style={"margin": 0, "fontWeight": "700"}),
-    html.P("Modelos predictivos · Proyecto 2 · La Tupla",
+    html.P("La Tupla - Jerónimo Rueda y JuanCamilo Gómez",
            style={"margin": 0, "opacity": 0.7, "fontSize": "0.9rem"}),
 ], style=HEADER_STYLE)
 
