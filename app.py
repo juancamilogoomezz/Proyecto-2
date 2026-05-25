@@ -374,7 +374,6 @@ panel_modelos = dbc.Card([
 tab_regresion = html.Div([
     # Contexto de la pregunta
     dbc.Alert([
-        html.Strong("Pregunta de negocio: "),
         "¿Pueden las condiciones socioeconómicas del hogar y las características del colegio "
         "predecir el puntaje global de un estudiante en el Saber 11?",
         html.Br(),
@@ -397,15 +396,8 @@ tab_regresion = html.Div([
 # ═══════════════════════════════════════════════════════════════════════════════
 
 tab_clasificacion = html.Div([
-    dbc.Alert([
-        html.Strong("Pregunta de negocio: "),
-        "¿Es posible clasificar el nivel de desempeño académico de un estudiante "
-        "(bajo/medio/alto) a partir de sus condiciones socioeconómicas y del colegio?",
+    dbc.Alert([,
         html.Br(),
-        html.Small(
-            "Modelo de clasificación · Científico de datos: Juan Camilo Gómez",
-            className="text-muted",
-        ),
     ], color="warning", className="mt-3 mb-3"),
 
     dbc.Card([
