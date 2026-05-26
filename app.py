@@ -11,28 +11,39 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from pathlib import Path
-
+import os
 import dash
 from dash import dcc, html, Input, Output, State, callback
 import dash_bootstrap_components as dbc
 
 import tensorflow as tf
-
+import keras
+print(keras.__version__)
+from tensorflow.keras import layers, models
+print(tf.__version__)
 # ═══════════════════════════════════════════════════════════════════════════════
 # CONFIGURACIÓN Y CARGA DE ARTEFACTOS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-BASE_DIR = Path(__file__).resolve().parent
-
+BASE_DIR = Path("/app")
 ARTIFACT_DIR = BASE_DIR / "artifacts_regresion"
 ARTIFACT_CLF_DIR = BASE_DIR / "artifacts_clasificacion"
 # Modelos serializados (regresión - Jerónimo)
-modelo_nn = tf.keras.models.load_model(
 
-    ARTIFACT_DIR / "modelo_regresion_nn_saber11.keras"
+modelo_nn = tf.keras.Sequential([
+    tf.keras.layers.Input(shape=(10,)),
+    tf.keras.layers.Dense(128, activation='relu'),
+    tf.keras.layers.Dropout(0.2),
+    tf.keras.layers.Dense(64, activation='relu'),
+    tf.keras.layers.Dropout(0.2),
+    tf.keras.layers.Dense(32, activation='relu'),
+    tf.keras.layers.Dropout(0.2),
+    tf.keras.layers.Dense(1, activation='linear'),
+])
 
-)
+modelo_nn.load_weights("/app/artifacts_regresion/modelo_regresion_nn_saber11.keras")
 
+print("Modelo Cargado exitosamente")
 modelo_hgb = joblib.load(
 
     ARTIFACT_DIR / "modelo_regresion_hgb_saber11.pkl"
@@ -57,9 +68,21 @@ df_comp = pd.read_csv(ARTIFACT_DIR / "comparacion_final_regresion.csv")
 # ============================
 
 
-modelo_clf_nn = tf.keras.models.load_model(
-    ARTIFACT_CLF_DIR / "modelo_clasificacion_nn.keras"
-)
+inputs = tf.keras.Input(shape=(9,))
+x = tf.keras.layers.BatchNormalization(momentum=0.99, epsilon=0.001)(inputs)
+x = tf.keras.layers.Dense(512, kernel_regularizer=tf.keras.regularizers.L2(0.0001))(x)
+x = tf.keras.layers.BatchNormalization(momentum=0.99, epsilon=0.001)(x)
+x = tf.keras.layers.Activation('relu')(x)
+x = tf.keras.layers.Dropout(0.2)(x)
+x = tf.keras.layers.Dense(248, kernel_regularizer=tf.keras.regularizers.L2(0.0001))(x)
+x = tf.keras.layers.BatchNormalization(momentum=0.99, epsilon=0.001)(x)
+x = tf.keras.layers.Activation('relu')(x)
+x = tf.keras.layers.Dropout(0.2)(x)
+outputs = tf.keras.layers.Dense(4, activation='softmax')(x)
+
+modelo_clf_nn = tf.keras.Model(inputs, outputs)
+modelo_clf_nn.load_weights(ARTIFACT_CLF_DIR / "modelo_clasificacion_nn.keras")
+print("Modelo clasificación Redes Neuronales cargado exitosamente")
 
 modelo_clf_rf = joblib.load(
     ARTIFACT_CLF_DIR / "modelo_clasificacion_rf.pkl"
@@ -205,7 +228,7 @@ def predecir_clasificacion(input_dict):
         row.append(float(value))
 
     X_new = np.array([row], dtype="float32")
-
+    print(f"DEBUG CLF - shape: {X_new.shape}, features: {FEATURES_CLF}")
     # Red neuronal: usa datos escalados
     X_new_s = scaler_clf.transform(X_new).astype("float32")
     proba_nn = modelo_clf_nn.predict(X_new_s, verbose=0)[0]

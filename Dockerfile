@@ -1,23 +1,26 @@
-FROM python:3.12-slim
+#Dockerfile del Taller 12
+#PROYECTO 2 LA TUPLA ACTD
+
+# syntax=docker/dockerfile:1 
+#FROM ubuntu:22.04
+FROM python:3.10-slim
+# install app dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-
-# Dependencias del sistema
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc g++ && \
-    rm -rf /var/lib/apt/lists/*
-
-# Instalar dependencias de Python
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-# Copiar código y artefactos
 COPY app.py .
-COPY artifacts_regresion/ ./artifacts_regresion/
-
-# Juan Camilo: descomenta cuando tengas tus artefactos
-# COPY artifacts_clasificacion/ ./artifacts_clasificacion/
-
+COPY artifacts_regresion ./artifacts_regresion
+COPY artifacts_clasificacion ./artifacts_clasificacion
+COPY assets ./assets
 EXPOSE 8050
+# install app
 
-CMD ["gunicorn", "app:server", "--bind", "0.0.0.0:8050", "--workers", "2", "--timeout", "120"]
+
+
+# final configuration
+CMD ["python3","app.py"]
