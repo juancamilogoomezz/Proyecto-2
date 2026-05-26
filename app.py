@@ -1,7 +1,8 @@
 """
-Proyecto 2 – Saber 11 Valle del Cauca
-Tablero interactivo de modelos predictivos
-Grupo: La Tupla
+Proyecto 2
+La Tupla
+Jerónimo rueda - 202223775
+Juan Camilo Gómez - 202220238
 """
 
 import json
@@ -18,9 +19,9 @@ import dash_bootstrap_components as dbc
 
 import tensorflow as tf
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# CONFIGURACIÓN Y CARGA DE ARTEFACTOS
-# ═══════════════════════════════════════════════════════════════════════════════
+
+# CARGA DE ARTEFACTOS
+
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -49,12 +50,12 @@ with open(ARTIFACT_DIR / "metadata_regresion.json", encoding="utf-8") as f:
 ORDINAL_MAPS = joblib.load(ARTIFACT_DIR / "ordinal_maps.pkl")
 FEATURES     = metadata["features"]
 
-# Tabla de comparación de experimentos
 df_comp = pd.read_csv(ARTIFACT_DIR / "comparacion_final_regresion.csv")
 
-# ============================
+
 # Artefactos clasificación
-# ============================
+
+
 
 
 modelo_clf_nn = tf.keras.models.load_model(
@@ -75,9 +76,9 @@ with open(ARTIFACT_CLF_DIR / "metadata_clasificacion.json", "r", encoding="utf-8
 FEATURES_CLF = metadata_clf["features"]
 CLASS_NAMES_CLF = metadata_clf["class_names"]
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# OPCIONES LEGIBLES PARA DROPDOWNS
-# ═══════════════════════════════════════════════════════════════════════════════
+# Dropdowns de regresion
+
+
 
 DROPDOWN_OPTIONS = {
     "FAMI_ESTRATOVIVIENDA": [
@@ -133,13 +134,9 @@ DEFAULT_VALUES = {
     "COLE_AREA_UBICACION":  "URBANO",
 }
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# FUNCIONES DE PREDICCIÓN
-# ═══════════════════════════════════════════════════════════════════════════════
+# prediccion de regresión
 
 def _encode_input(input_dict):
-
-    """Convierte valores categóricos a numéricos usando los mapas ordinales."""
 
     row = []
 
@@ -165,8 +162,6 @@ def _encode_input(input_dict):
 
 def predecir_nn(input_dict):
 
-    """Predice PUNT_GLOBAL usando la red neuronal."""
-
     X = _encode_input(input_dict)
 
     X_sc = scaler_X.transform(X).astype("float32")
@@ -182,8 +177,6 @@ def predecir_nn(input_dict):
     return float(pred)
 
 def predecir_hgb(input_dict):
-
-    """Predice PUNT_GLOBAL usando HistGradientBoostingRegressor."""
 
     X = _encode_input(input_dict)
 
@@ -206,12 +199,12 @@ def predecir_clasificacion(input_dict):
 
     X_new = np.array([row], dtype="float32")
 
-    # Red neuronal: usa datos escalados
+    # Red neuronal
     X_new_s = scaler_clf.transform(X_new).astype("float32")
     proba_nn = modelo_clf_nn.predict(X_new_s, verbose=0)[0]
     pred_nn = int(np.argmax(proba_nn))
 
-    # Random Forest: según el notebook, usa datos sin escalar
+    # Random Forest
     proba_rf = modelo_clf_rf.predict_proba(X_new)[0]
     pred_rf = int(np.argmax(proba_rf))
 
@@ -225,13 +218,6 @@ def predecir_clasificacion(input_dict):
     }
 
 def calcular_puntaje_total_clasificacion(input_dict):
-    """
-    Calcula el puntaje total como suma de las cinco áreas principales:
-    Inglés, Matemáticas, Sociales, Ciencias Naturales y Lectura Crítica.
-
-    La función busca los nombres reales usados en FEATURES_CLF para evitar
-    errores por diferencias entre mayúsculas, espacios o guiones bajos.
-    """
     import unicodedata
     import re
 
@@ -242,20 +228,13 @@ def calcular_puntaje_total_clasificacion(input_dict):
         texto = re.sub(r"[^a-z0-9]", "", texto)
         return texto
 
-    # Mapa normalizado de las variables disponibles en input_dict
     keys_norm = {
         normalizar(k): k
         for k in input_dict.keys()
     }
 
-    # Posibles nombres de cada área
-    areas = {
-        "Inglés": ["puntingles", "puntajeingles"],
-        "Matemáticas": ["puntmatematicas", "puntajematematicas"],
-        "Sociales": ["puntsocialesciudadanas", "puntajesocialesciudadanas"],
-        "Ciencias Naturales": ["puntcnaturales", "puntajecnaturales"],
-        "Lectura Crítica": ["puntlecturacritica", "puntajelecturacritica"],
-    }
+
+
 
     total = 0
 
@@ -282,12 +261,16 @@ def calcular_puntaje_total_clasificacion(input_dict):
 
     return total
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# GRÁFICAS ESTÁTICAS DEL MODELO
-# ═══════════════════════════════════════════════════════════════════════════════
+
+
+
+
+
+# comparación modelos de regresión
+
 
 def fig_comparacion_modelos():
-    """Barras agrupadas comparando MAE, RMSE y R² de todos los experimentos."""
+    #MAE, MSE y R cuadrado de los experimentos
     df = df_comp.copy()
     df["label"] = df["experimento"].str.replace("_", " ").str.title()
 
@@ -313,7 +296,7 @@ def fig_comparacion_modelos():
 
 
 def fig_r2_modelos():
-    """Barras de R² para cada modelo."""
+    # Barras de R cuadrado para cada modelo
     df = df_comp.copy()
     df["label"] = df["experimento"].str.replace("_", " ").str.title()
     colores = ["#27ae60" if i == 0 else "#aec6cf" for i in range(len(df))]
@@ -333,9 +316,10 @@ def fig_r2_modelos():
     return fig
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# APP DASH
-# ═══════════════════════════════════════════════════════════════════════════════
+
+
+
+# APP dash
 
 app = dash.Dash(
     __name__,
@@ -343,9 +327,11 @@ app = dash.Dash(
     suppress_callback_exceptions=True,
     title="Saber 11 — Modelos Predictivos",
 )
-server = app.server  # Para gunicorn en Docker
+server = app.server 
 
-# ── Estilo global ─────────────────────────────────────────────────────────────
+
+
+
 HEADER_STYLE = {
     "backgroundColor": "#1a2634",
     "color": "white",
@@ -365,26 +351,27 @@ TAB_SELECTED_STYLE = {
     "fontWeight": "700",
 }
 
-# ── Header ────────────────────────────────────────────────────────────────────
+
+# titulo
 header = html.Div([
-    html.H2("Saber 11 — Valle del Cauca", style={"margin": 0, "fontWeight": "700"}),
+    html.H2("Modelos predictivos para el Saber 11 en el Valle del Cauca", style={"margin": 0, "fontWeight": "700"}),
     html.P("La Tupla - Jerónimo Rueda y JuanCamilo Gómez",
            style={"margin": 0, "opacity": 0.7, "fontSize": "0.9rem"}),
 ], style=HEADER_STYLE)
 
-# ── Tabs ──────────────────────────────────────────────────────────────────────
+# Tabs
 tabs = dcc.Tabs(
     id="tabs-main",
     value="tab-regresion",
     children=[
         dcc.Tab(
-            label="Predicción de Puntaje (Regresión)",
+            label="Predicción de Puntaje ",
             value="tab-regresion",
             style=TAB_STYLE,
             selected_style=TAB_SELECTED_STYLE,
         ),
         dcc.Tab(
-            label="Clasificación Educación Madre (Clasificación)",
+            label="Clasificación Educación Madre ",
             value="tab-clasificacion",
             style=TAB_STYLE,
             selected_style=TAB_SELECTED_STYLE,
@@ -393,12 +380,11 @@ tabs = dcc.Tabs(
     style={"marginBottom": "0"},
 )
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# TAB 1 — REGRESIÓN  (Jerónimo)
-# ═══════════════════════════════════════════════════════════════════════════════
+
+# Tab de regresión
+
 
 def _make_dropdown(feature_name):
-    """Genera un dropdown con label para una feature."""
     return html.Div([
         html.Label(
             LABEL_MAP[feature_name],
@@ -456,12 +442,12 @@ panel_inputs = dbc.Card([
 
 panel_resultado = dbc.Card([
     dbc.CardHeader(
-        html.H5("Resultado de la predicción", className="mb-0", style={"fontWeight": "700"}),
+        html.H5("Predicción del puntaje", className="mb-0", style={"fontWeight": "700"}),
     ),
     dbc.CardBody(id="resultado-prediccion", children=[
         html.Div([
             html.P(
-                'Ajuste el perfil del estudiante y presione "Predecir puntaje".',
+                "Ponga el perfil del estudiante que desee y espichar en 'Predecir puntjae'.",
                 className="text-muted text-center mt-4",
                 style={"fontSize": "1rem"},
             ),
@@ -485,16 +471,10 @@ panel_modelos = dbc.Card([
 
 tab_regresion = html.Div([
     # Contexto de la pregunta
-    dbc.Alert([
-        "¿Pueden las condiciones socioeconómicas del hogar y las características del colegio "
-        "predecir el puntaje global de un estudiante en el Saber 11?",
-        html.Br(),
-    ], color="info", className="mt-3 mb-3"),
+
 
     dbc.Row([
-        # Columna izquierda: inputs
         dbc.Col(panel_inputs, lg=4, md=5, className="mb-3"),
-        # Columna derecha: resultado + modelos
         dbc.Col([
             panel_resultado,
             panel_modelos,
@@ -503,9 +483,7 @@ tab_regresion = html.Div([
 ], className="p-3")
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# TAB 2 — CLASIFICACIÓN  
-# ═══════════════════════════════════════════════════════════════════════════════
+# Tab de clasificacion 
 
 def crear_input_clasificacion(feature):
     label = feature.replace("_", " ").replace("punt", "Puntaje").title()
@@ -574,7 +552,7 @@ tab_clasificacion = dbc.Container([
                     ),
 
                     html.P(
-                        "Comparación entre la red neuronal y Random Forest usando métricas globales y matrices de confusión.",
+                        "Comparación entre red neuronal y Random Forest usando métricas y matrices de confusión.",
                         style={"color": "#6c757d", "fontSize": "0.9rem"}
                     ),
 
@@ -608,9 +586,7 @@ tab_clasificacion = dbc.Container([
 ], fluid=True)
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # LAYOUT
-# ═══════════════════════════════════════════════════════════════════════════════
 
 app.layout = html.Div([
     header,
@@ -621,9 +597,7 @@ app.layout = html.Div([
 ])
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # CALLBACKS
-# ═══════════════════════════════════════════════════════════════════════════════
 
 @callback(
     Output("tab-content", "children"),
@@ -667,7 +641,9 @@ def hacer_prediccion(n_clicks, *values):
 
         ))
 
-        # Línea vertical de referencia: media poblacional
+
+
+
 
         fig_gauge.add_vline(
 
@@ -881,9 +857,7 @@ def hacer_clasificacion(n_clicks, *values):
             color="danger"
         )
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # MAIN
-# ═══════════════════════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8050, debug=False)
